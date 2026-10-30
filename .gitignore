@@ -2,4 +2,6 @@ __pycache__/
 .icon-cache/
 .last-built
 sync.log
+bob423.log
+bob423-*.gpx
 .DS_Store

@@ -4,9 +4,7 @@ A shared list of interesting and useful spots (anchorages, fuel, dog-friendly
 shore access…) that shows up as an overlay in [AvNav](https://www.wellenvogel.net/software/avnav/docs/beschreibung.html?lang=en)
 on OpenPlotter.
 
-`waypoints.csv` is the source of truth. A job on the boat pulls this repo every
-hour and regenerates the AvNav overlay, so anything merged to `main` appears on
-the chart within the hour.
+`waypoints.csv` is converted to an overlay and sync'd on the hour - so whatever waypoints are in here show up on your plotter.
 
 ![Anchor icon on the AvNav chart](readme-images/icon-on-map.png)
 
@@ -23,9 +21,7 @@ Tap a waypoint to see its name and description:
   `/home/pi/avnav/data/overlays/`. If the boat is offline it keeps the
   existing files and tries again next hour.
 
-## Install (on the OpenPlotter Pi)
-
-AvNav runs as `pi`, so everything below runs as `pi` too.
+## Install (on an OpenPlotter Pi)
 
 1. Clone the repo:
 

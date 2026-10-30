@@ -9,6 +9,10 @@ Coordinates may be written as:
   37 49.40 N        same, space separated
   37.8233 / -76.31  plain decimal degrees
 A trailing (or leading) N/S/E/W sets the sign; S and W are negative.
+
+If symbol is an emoji (e.g. ⚓), its Twemoji icon is downloaded and packed into
+an icons zip next to the gpx. Select that zip as the overlay's "icon file" in
+AvNav. Any other symbol value is passed through to <sym> unchanged.
 """
 
 import argparse
@@ -17,9 +21,15 @@ import os
 import re
 import sys
 import tempfile
+import urllib.request
+import zipfile
 from xml.etree import ElementTree as ET
 
 GPX_NS = "http://www.topografix.com/GPX/1/1"
+
+TWEMOJI_URL = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/{}.svg"
+ICON_PX = 32
+ICON_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".icon-cache")
 
 # Pulls out up to three numbers (deg, min, sec) and an optional hemisphere.
 COORD_RE = re.compile(
@@ -69,6 +79,36 @@ def to_decimal(value, axis):
     return round(decimal, 6)
 
 
+def emoji_icon_name(symbol):
+    """Twemoji file stem for an emoji, e.g. "⚓" -> "2693".
+
+    Twemoji drops the U+FE0F variation selector except inside ZWJ sequences.
+    """
+    if "\u200d" not in symbol:
+        symbol = symbol.replace("\ufe0f", "")
+    return "-".join(f"{ord(c):x}" for c in symbol)
+
+
+def fetch_icon(name):
+    """Return the SVG for a Twemoji icon, sized to ICON_PX, caching downloads."""
+    cached = os.path.join(ICON_CACHE, f"{name}.svg")
+    if not os.path.exists(cached):
+        url = TWEMOJI_URL.format(name)
+        try:
+            with urllib.request.urlopen(url, timeout=30) as r:
+                svg = r.read()
+        except OSError as e:
+            raise SystemExit(f"could not download icon {url}: {e}")
+        os.makedirs(ICON_CACHE, exist_ok=True)
+        with open(cached, "wb") as f:
+            f.write(svg)
+    with open(cached, "rb") as f:
+        svg = f.read()
+    # Twemoji SVGs only carry a viewBox; give them an explicit size so the map
+    # draws them at ICON_PX rather than whatever the browser picks.
+    return svg.replace(b"<svg ", f'<svg width="{ICON_PX}" height="{ICON_PX}" '.encode(), 1)
+
+
 def read_waypoints(csv_path):
     waypoints = []
     errors = []
@@ -86,13 +126,19 @@ def read_waypoints(csv_path):
             try:
                 if not row["name"]:
                     raise ValueError("empty name")
+                sym = row.get("symbol", "")
+                icon = None
+                if sym and not sym.isascii():
+                    icon = emoji_icon_name(sym)
+                    sym = icon + ".svg"
                 waypoints.append(
                     {
                         "name": row["name"],
                         "lat": to_decimal(row["lat"], "lat"),
                         "lon": to_decimal(row["lon"], "lon"),
                         "desc": row.get("desc", ""),
-                        "sym": row.get("symbol", ""),
+                        "sym": sym,
+                        "icon": icon,
                         "link": row.get("link", ""),
                     }
                 )
@@ -119,14 +165,14 @@ def build_gpx(waypoints):
     return ET.ElementTree(gpx)
 
 
-def write_atomic(tree, out_path):
-    """Write to a temp file in the same directory, then rename over the target
-    so AvNav never sees a half-written file."""
+def write_atomic(out_path, write):
+    """Call write(f) on a temp file in the same directory, then rename over the
+    target so AvNav never sees a half-written file."""
     out_dir = os.path.dirname(os.path.abspath(out_path))
-    fd, tmp = tempfile.mkstemp(dir=out_dir, prefix=".waypoints-", suffix=".gpx")
+    fd, tmp = tempfile.mkstemp(dir=out_dir, prefix=".waypoints-")
     try:
         with os.fdopen(fd, "wb") as f:
-            tree.write(f, encoding="utf-8", xml_declaration=True)
+            write(f)
         os.chmod(tmp, 0o644)
         os.replace(tmp, out_path)
     except BaseException:
@@ -139,15 +185,37 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("csv", nargs="?", default=os.path.join(here, "waypoints.csv"))
     p.add_argument("-o", "--output", default="-", help="output .gpx path (default: stdout)")
+    p.add_argument(
+        "--icons",
+        help="output icons .zip path (default: <output>-icons.zip next to the gpx; none for stdout)",
+    )
     args = p.parse_args()
 
-    tree = build_gpx(read_waypoints(args.csv))
+    waypoints = read_waypoints(args.csv)
+    tree = build_gpx(waypoints)
+    icons_path = args.icons
+    if icons_path is None and args.output != "-":
+        icons_path = os.path.splitext(args.output)[0] + "-icons.zip"
+
+    if icons_path:
+        # Fetch everything before writing anything, so a failed download
+        # leaves the previous gpx and zip in place.
+        icons = {wp["sym"]: fetch_icon(wp["icon"]) for wp in waypoints if wp["icon"]}
+
+        def write_zip(f):
+            with zipfile.ZipFile(f, "w", zipfile.ZIP_DEFLATED) as z:
+                for name, svg in sorted(icons.items()):
+                    z.writestr(name, svg)
+
+        write_atomic(icons_path, write_zip)
+        print(f"wrote {len(icons)} icons to {icons_path}", file=sys.stderr)
+
     if args.output == "-":
         tree.write(sys.stdout.buffer, encoding="utf-8", xml_declaration=True)
         sys.stdout.buffer.write(b"\n")
     else:
-        write_atomic(tree, args.output)
-        print(f"wrote {len(tree.getroot())} waypoints to {args.output}", file=sys.stderr)
+        write_atomic(args.output, lambda f: tree.write(f, encoding="utf-8", xml_declaration=True))
+        print(f"wrote {len(waypoints)} waypoints to {args.output}", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -24,15 +24,21 @@ if ! git fetch --quiet origin "$BRANCH" 2>/dev/null; then
     exit 0
 fi
 
-local_rev="$(git rev-parse HEAD)"
-remote_rev="$(git rev-parse "origin/$BRANCH")"
+ICONS="${OUT%.gpx}-icons.zip"
+# Records the last revision that converted successfully, so a failed build
+# (e.g. an icon download while offline) is retried on the next run.
+STAMP="$REPO_DIR/.last-built"
 
-if [[ "$local_rev" == "$remote_rev" && -f "$OUT" ]]; then
+remote_rev="$(git rev-parse "origin/$BRANCH")"
+built_rev="$(cat "$STAMP" 2>/dev/null || true)"
+
+if [[ "$built_rev" == "$remote_rev" && -f "$OUT" && -f "$ICONS" ]]; then
     exit 0
 fi
 
 # This clone is deploy-only, so discard any local edits.
 git reset --quiet --hard "origin/$BRANCH"
-log "updated ${local_rev:0:7} -> ${remote_rev:0:7}"
+log "building ${remote_rev:0:7}"
 
-python3 "$REPO_DIR/csv_to_gpx.py" "$REPO_DIR/waypoints.csv" -o "$OUT"
+python3 "$REPO_DIR/csv_to_gpx.py" "$REPO_DIR/waypoints.csv" -o "$OUT" --icons "$ICONS"
+echo "$remote_rev" > "$STAMP"

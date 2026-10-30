@@ -46,9 +46,10 @@ if ! html="$(curl -fsSL --max-time 60 "$PAGE")"; then
     exit 0
 fi
 
+# Hrefs on the page contain literal spaces, so match up to the closing quote.
 links="$(echo "$html" \
-    | grep -oE 'https://bob423\.com/long/[^"<> ]+\.gpx' \
-    | sed 's/ /%20/g' | sort -u || true)"
+    | grep -oE 'href="https://bob423\.com/long/[^"<>]+\.gpx"' \
+    | sed -e 's/^href="//' -e 's/"$//' -e 's/ /%20/g' | sort -u || true)"
 
 if [[ -z "$links" ]]; then
     log "no track links found on page (layout changed?), keeping existing tracks"
@@ -61,7 +62,7 @@ for entry in "${SECTIONS[@]}"; do
     out="$OUT_DIR/$name.gpx"
     stamp="$STATE_DIR/$name.url"
 
-    url="$(echo "$links" | grep -F "/long/${prefix}" | head -1 || true)"
+    url="$(echo "$links" | grep -E "/long/${prefix}(%20[0-9]+)?\.gpx\$" | head -1 || true)"
     if [[ -z "$url" ]]; then
         log "$name: no link found, keeping existing file"
         continue

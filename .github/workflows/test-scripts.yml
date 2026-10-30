@@ -1,15 +1,20 @@
-name: Check waypoints
+name: Test scripts
 
+# Runs the PR's own scripts, so it only runs when they change, and outside
+# contributors need approval first. CSV-only changes are checked by
+# check-csv.yml without approval.
 on:
   pull_request:
-  push:
-    branches: [main]
+    paths:
+      - "**.py"
+      - "**.sh"
+      - ".github/**"
 
 permissions:
   contents: read
 
 jobs:
-  convert:
+  test-scripts:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

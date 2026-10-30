@@ -17,10 +17,10 @@ jobs:
   test-scripts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Match the Python on the OpenPlotter Pi.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -28,15 +28,15 @@ jobs:
       - name: Convert waypoints.csv
         run: |
           mkdir -p out
-          if ! python3 csv_to_gpx.py waypoints.csv -o out/waypoints.gpx 2> out/errors.txt; then
-            cat out/errors.txt
-            # Turn "file:line: message" into annotations on the PR diff.
-            sed -nE 's/^([^:]+):([0-9]+): (.*)$/::error file=\1,line=\2::\3/p' out/errors.txt
-            exit 1
-          fi
+          status=0
+          python3 csv_to_gpx.py waypoints.csv -o out/waypoints.gpx 2> out/errors.txt || status=$?
           cat out/errors.txt
+          # Turn "file:line: [warning: ]message" into annotations on the PR diff.
+          sed -nE -e 's/^([^:]+):([0-9]+): warning: (.*)$/::warning file=\1,line=\2::\3/p' -e t \
+            -e 's/^([^:]+):([0-9]+): (.*)$/::error file=\1,line=\2::\3/p' out/errors.txt
+          exit $status
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: waypoints-overlay
           path: |

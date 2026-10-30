@@ -94,4 +94,5 @@ packages):
 ./csv_to_gpx.py
 ```
 
-It prints the GPX, or lists every bad row with its line number.
+It prints the GPX, or lists every bad row with its line number. The same check
+runs on every pull request, and the CSV is sanitized during conversion.

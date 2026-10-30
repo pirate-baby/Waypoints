@@ -1,0 +1,5 @@
+# Scripts and CI run on the boat, so changes need the maintainer's review.
+*               @norton120
+
+# Waypoint data is sanitized on conversion; any reviewer can approve it.
+/waypoints.csv

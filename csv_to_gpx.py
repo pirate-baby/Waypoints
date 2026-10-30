@@ -126,6 +126,14 @@ def read_waypoints(csv_path):
             try:
                 if not row["name"]:
                     raise ValueError("empty name")
+                # AvNav renders desc as raw HTML if it contains "<", so swap
+                # angle brackets for look-alikes to keep it plain text.
+                desc = row.get("desc", "").replace("<", "‹").replace(">", "›")
+                # AvNav only opens lowercase http(s) links.
+                link = re.sub(r"^https?://", lambda m: m.group(0).lower(), row.get("link", ""), flags=re.IGNORECASE)
+                if link and not link.startswith(("http://", "https://")):
+                    print(f"{csv_path}:{line}: warning: dropping non-http(s) link {link!r}", file=sys.stderr)
+                    link = ""
                 sym = row.get("symbol", "")
                 icon = None
                 if sym and not sym.isascii():
@@ -136,10 +144,10 @@ def read_waypoints(csv_path):
                         "name": row["name"],
                         "lat": to_decimal(row["lat"], "lat"),
                         "lon": to_decimal(row["lon"], "lon"),
-                        "desc": row.get("desc", ""),
+                        "desc": desc,
                         "sym": sym,
                         "icon": icon,
-                        "link": row.get("link", ""),
+                        "link": link,
                     }
                 )
             except ValueError as e:

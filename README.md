@@ -20,28 +20,22 @@ Tap a waypoint to see its name and description:
 - `sync.sh` fetches `main` and, if anything changed, rebuilds both files into
   `/home/pi/avnav/data/overlays/`. If the boat is offline it keeps the
   existing files and tries again next hour.
+- `install.sh` sets the above up on the Pi.
 
 ## Install (on an OpenPlotter Pi)
 
-1. Clone the repo:
+1. On the Pi, run the installer as any user with `sudo`:
 
    ```sh
-   sudo -u pi git clone https://github.com/pirate-baby/Waypoints.git /home/pi/Waypoints
+   curl -fsSL https://raw.githubusercontent.com/pirate-baby/Waypoints/main/install.sh | bash
    ```
 
-2. Add the hourly job to `pi`'s crontab (`sudo -u pi crontab -e`):
+   This clones the repo to `/home/pi/Waypoints`, adds an hourly cron job for
+   the `pi` user (the user AvNav runs as), and builds the overlay. It's safe
+   to re-run. If AvNav runs as a different user, end the command with
+   `| AVNAV_USER=<user> bash` instead.
 
-   ```
-   0 * * * * /home/pi/Waypoints/sync.sh >> /home/pi/Waypoints/sync.log 2>&1
-   ```
-
-3. Run it once to generate the overlay now:
-
-   ```sh
-   sudo -u pi /home/pi/Waypoints/sync.sh
-   ```
-
-4. In AvNav, open the chart's overlay settings, add `waypoints.gpx`, and set
+2. In AvNav, open the chart's overlay settings, add `waypoints.gpx`, and set
    **icon file** to `waypoints-icons.zip`.
 
 To force a rebuild when nothing has changed, delete the build stamp first:

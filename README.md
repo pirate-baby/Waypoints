@@ -1,7 +1,7 @@
 # Waypoints
 
 A shared list of interesting and useful spots (anchorages, fuel, dog-friendly
-shore access…) that shows up as an overlay in [AvNav](https://www.wellenvogel.net/software/avnav/docs/beschreibung.html?lang=en)
+shore access, etc.) that shows up as an overlay in [AvNav](https://www.wellenvogel.net/software/avnav/docs/beschreibung.html?lang=en)
 on OpenPlotter.
 
 `waypoints.csv` is converted to an overlay and sync'd on the hour - so whatever waypoints are in here show up on your plotter.

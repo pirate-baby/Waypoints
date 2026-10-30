@@ -34,10 +34,13 @@ Tap a waypoint to see its name and description:
    the `pi` user (the user AvNav runs as), and builds the overlay. It's safe
    to re-run. If AvNav runs as a different user, end the command with
    `| AVNAV_USER=<user> bash` instead.
+   
+2. Add the waypoints layer in AvNav:
+   go to layers (the sideways squares icon) -> "Edit" -> "Insert Before" -> click on the "Overlay Name" line -> select "Waypoints.gpx" -> check the box to make it visible -> "Save"
+3. Set the waypoints layer **icon file** to `waypoints-icons.zip`:
+   go to layers (the sideways squares icon) -> "Edit" -> select the pencil icon next to "waypoints.gpx" -> click the line next to "Icon File" -> select "waypoints-icons.zip" -> "Ok" -> "Save"
 
-2. In AvNav, open the chart's overlay settings, add `waypoints.gpx`, and set
-   **icon file** to `waypoints-icons.zip`.
-
+### Troubleshooting
 To force a rebuild when nothing has changed, delete the build stamp first:
 
 ```sh

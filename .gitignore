@@ -2,3 +2,4 @@ __pycache__/
 .icon-cache/
 .last-built
 sync.log
+.DS_Store

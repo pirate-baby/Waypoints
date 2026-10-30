@@ -20,6 +20,8 @@ Tap a waypoint to see its name and description:
 - `sync.sh` fetches `main` and, if anything changed, rebuilds both files into
   `/home/pi/avnav/data/overlays/`. If the boat is offline it keeps the
   existing files and tries again next hour.
+- `bob423.sh` (optional) downloads the latest Bob423 ICW tracks into the same
+  overlays directory once a day. See [Bob423 tracks](#bob423-tracks-optional).
 - `install.sh` sets the above up on the Pi.
 
 ## Install (on an OpenPlotter Pi)
@@ -50,6 +52,29 @@ sudo -u pi rm -f /home/pi/Waypoints/.last-built && sudo -u pi /home/pi/Waypoints
 Problems (bad coordinates, failed icon downloads) are logged to
 `/home/pi/Waypoints/sync.log`; the previous overlay stays in place until the
 next good build.
+
+## Bob423 tracks (optional)
+
+[Bob423](https://bobicw.blogspot.com/p/bob423-long-tracks.html) publishes free
+GPX tracks that follow the deepest water on the Atlantic ICW from Norfolk to
+Miami, updated as shoaling changes. Install with `--bob` to add them to AvNav:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/pirate-baby/Waypoints/main/install.sh | bash -s -- --bob
+```
+
+This adds a daily cron job that downloads the current tracks into your AvNav
+overlays directory as `bob423-norfolk-southport.gpx`,
+`bob423-southport-savannah.gpx`, `bob423-savannah-titusville.gpx`,
+`bob423-titusville-miami.gpx` and `bob423-side-tracks.gpx`. The filenames stay
+the same across updates, so add the ones you want as layers once (same steps
+as the waypoints layer) and they stay current. Re-running the installer
+without `--bob` removes the cron job; the downloaded tracks stay until you
+delete them. Logs go to `/home/pi/Waypoints/bob423.log`.
+
+The tracks are Bob's work, for personal use only. Don't commit or redistribute
+them, and read his [Rules of the Road](https://bob423.com/fb/RulesofRoad.pdf)
+before relying on them.
 
 ## Symbols
 

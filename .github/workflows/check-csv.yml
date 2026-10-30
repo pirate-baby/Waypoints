@@ -1,0 +1,59 @@
+name: Check waypoints CSV
+
+# Safe to run on any PR, including forks, without approval. pull_request_target
+# runs main's workflow and scripts; the PR's waypoints.csv is fetched as data
+# and nothing else from the PR is checked out or run. Keep it that way: never
+# check out the PR's code here, and never put PR text in a `run:` with ${{ }}.
+on:
+  pull_request_target:
+
+permissions:
+  contents: read
+
+jobs:
+  check-csv:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks out main, not the PR.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Match the Python on the OpenPlotter Pi.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch the PR's waypoints.csv
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git fetch --quiet --no-tags --depth=1 origin "$HEAD_SHA"
+          mkdir -p pr out
+          git show "$HEAD_SHA:waypoints.csv" > pr/waypoints.csv
+
+      # Also downloads every emoji icon, so an emoji Twemoji doesn't have fails here.
+      - name: Convert waypoints.csv
+        working-directory: pr
+        run: |
+          if ! python3 -I ../csv_to_gpx.py waypoints.csv -o ../out/waypoints.gpx 2> ../out/errors.txt; then
+            # Print PR-controlled text with workflow commands disabled.
+            token="$(openssl rand -hex 16)"
+            echo "::stop-commands::$token"
+            cat ../out/errors.txt
+            echo "::$token::"
+            # Turn "file:line: message" into annotations on the PR diff.
+            sed -nE 's/^([^:]+):([0-9]+): (.*)$/::error file=\1,line=\2::\3/p' ../out/errors.txt
+            exit 1
+          fi
+          token="$(openssl rand -hex 16)"
+          echo "::stop-commands::$token"
+          cat ../out/errors.txt
+          echo "::$token::"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waypoints-overlay
+          path: |
+            out/waypoints.gpx
+            out/waypoints-icons.zip
